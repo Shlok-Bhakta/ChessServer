@@ -2,6 +2,6 @@
   import ChessBoard from "./lib/ChessBoard/ChessBoard.svelte";
 </script>
 
-<main>
+<main class="">
   <ChessBoard />
 </main>
