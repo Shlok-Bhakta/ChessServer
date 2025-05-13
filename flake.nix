@@ -16,10 +16,12 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
+
+
         pythonWP = pkgs.python313.withPackages (
-          ps: with ps; [
+          ps: with ps; [ 
             flask
-            requests
+            requests 
           ]
         );
         startScript = pkgs.writeShellScriptBin "start" ''
@@ -35,6 +37,7 @@
             pythonWP
             pkgs.sqld
             pkgs.sqlite
+            pkgs.pocketbase
             startScript
             stopScript
           ];
