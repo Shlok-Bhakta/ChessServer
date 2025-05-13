@@ -22,7 +22,8 @@
           ps: with ps; [ 
             flask
             requests
-            apscheduler 
+            apscheduler
+            chess 
           ]
         );
         startScript = pkgs.writeShellScriptBin "start" ''
