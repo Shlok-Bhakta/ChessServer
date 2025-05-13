@@ -3,6 +3,7 @@ from flask import render_template
 import sqlite3
 import os
 import time
+from apscheduler.schedulers.background import BackgroundScheduler
 
 dbfile = "chess.db"
 if "SQLITE_DB" in os.environ:
@@ -61,6 +62,24 @@ db.execute('''CREATE TABLE IF NOT EXISTS game
 
 app = Flask(__name__)
 
+def mytaskfunc():
+    conn = sqlite3.connect(dbfile)
+    # delete all players from the queue that have a lastseen more than 20 seconds
+    cursor = conn.execute("SELECT * FROM queue WHERE lastseen < ?", (int(round(time.time() * 1000)) - 20000,))
+    rows = cursor.fetchall()
+    for row in rows:
+        conn.execute("DELETE FROM queue WHERE id = ?", (row[0],))
+        print(f"deleting game {row[0]} as player did not respond")
+    conn.commit()
+    conn.close()
+    print(f"done cleaning queue") 
+    
+    
+
+scheduler = BackgroundScheduler()
+clean_queue_job = scheduler.add_job(mytaskfunc, 'interval', seconds=10)
+scheduler.start()
+
 @app.route("/start-game", methods=["POST"])
 def start_game():
     conn = sqlite3.connect(dbfile)
@@ -87,7 +106,10 @@ def start_game():
     cursor = conn.execute("SELECT * FROM queue WHERE botid = ?", (bot_id,))
     row = cursor.fetchone()
     if row:
-        return "Bot is already in the queue", 400
+        # extend the timer
+        conn.execute("UPDATE queue SET lastseen = ? WHERE id = ?", (int(round(time.time() * 1000)), row[0]))
+        conn.commit()
+        return "Bot is already in the queue and your timer has been extended to 20 seconds. Send another request by then or you will be removed from the queue", 200
     
     conn.commit()    
     # add bot to the queue
