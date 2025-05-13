@@ -21,7 +21,8 @@
         pythonWP = pkgs.python313.withPackages (
           ps: with ps; [ 
             flask
-            requests 
+            requests
+            apscheduler 
           ]
         );
         startScript = pkgs.writeShellScriptBin "start" ''
