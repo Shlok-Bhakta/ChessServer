@@ -43,9 +43,7 @@
           ];
           shellHook = ''
             export FLASK_APP=app.py
-
-            BACKEND_PORT=7456
-            FRONTEND_PORT=7457
+            export SQLITE_DB=chess.db
 
             echo "Python Flask chess dev shell with libsql ready!"
             zsh
