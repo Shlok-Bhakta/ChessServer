@@ -5,6 +5,7 @@ from db_utils import *
 
 app = Flask(__name__)
 
+init_db()
 def mytaskfunc():
     conn = get_db_connection()
     # delete all players from the queue that have a lastseen more than 20 seconds
@@ -21,8 +22,6 @@ scheduler = BackgroundScheduler()
 clean_queue_job = scheduler.add_job(mytaskfunc, 'interval', seconds=10)
 scheduler.start()
 
-with app.app_context():
-    init_db()
 
 from routes.start_game import start_game
 app.add_url_rule("/start-game", view_func=start_game, methods=["POST"])

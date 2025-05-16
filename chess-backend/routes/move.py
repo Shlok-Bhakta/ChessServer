@@ -57,62 +57,29 @@ def move():
     if row["isactive"] == 1: # white player goes
         # check if the current bot is the white bot
         if row["whitebotid"] == bot_id:
-            # get the most recent fen
-            fen_arr = row["moves"].split(",")
-            current_board = fen_arr[-1]
-            # get the move back from the payload
-            move_val = payload.get("move")
-            board = chess.Board(current_board)
-            board.turn = chess.WHITE
-            # TODO proper validation of the move
-            move = chess.Move.from_uci(move_val)
-            board.push(move)
-            fen = board.fen()
-            
-            fen_arr.append(fen.split(" ")[0])
-            fen_string = ','.join(fen_arr)
-            # update fen string
-            conn.execute("UPDATE game SET moves = ? WHERE id = ?", (fen_string, row["id"]))
-            # update the time left for white
-            conn.execute("UPDATE game SET whiteplayertime = ? WHERE id = ?", (row["whiteplayertime"] - (call_time - row["requestsent"]), row["id"]))
-            # update isactive to be 2 (black turn)
-            conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (2, row["id"]))
-            conn.commit()
-            conn.close()
-            return "Game updated", 200
-        else:
-            conn.commit()
-            conn.close()
-            return "It is not your turn, send a new request in like 5 seconds to see if the other bot actually made a turn", 205
-    if row["isactive"] == 2: # black player goes
-        # check if the current bot is the black bot
-        if row["blackbotid"] == bot_id:
-            # get the most recent fen
-            fen_arr = row["moves"].split(",")
-            current_board = fen_arr[-1]
-            # get the move back from the payload
-            move_val = payload.get("move")
-            board = chess.Board(current_board)
-            board.turn = chess.BLACK
-            # TODO proper validation of the move
-            move = chess.Move.from_uci(move_val)
-            board.push(move)
-            fen = board.fen()
-            fen_arr.append(fen.split(" ")[0])
-            fen_string = ','.join(fen_arr)
-            # update fen string
-            conn.execute("UPDATE game SET moves = ? WHERE id = ?", (fen_string, row["id"]))
-            # update the time left for black
-            conn.execute("UPDATE game SET blackplayertime = ? WHERE id = ?", (row["blackplayertime"] - (call_time - row["requestsent"]), row["id"]))
-            # update isactive to be 1 (white turn)
-            conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (1, row["id"]))
-            conn.commit()
+            board = reconstruct_board(row["moves"])
+            board = add_move(board, payload.get("move"), "white")
+            check = handle_potential_game_over(conn, board, row["id"], row["whiteplayertime"], row["whiteplayerid"], row["whitebotid"])
+            if check != None:
+                return check    
+            update_time_and_moves_and_isactive(conn, row["id"], row["whiteplayertime"] - (call_time - row["requestsent"]), row["moves"], payload.get("move"), "white")
             conn.close()
             return "Game updated", 205
         else:
-            conn.commit()
+            return handle_not_player_turn(conn)
+    if row["isactive"] == 2: # black player goes
+        # check if the current bot is the black bot
+        if row["blackbotid"] == bot_id:
+            board = reconstruct_board(row["moves"])
+            board = add_move(board, payload.get("move"), "black")      
+            check = handle_potential_game_over(conn, board, row["id"], row["blackplayertime"], row["blackplayerid"], row["blackbotid"])
+            if check != None:
+                return check
+            update_time_and_moves_and_isactive(conn, row["id"], row["blackplayertime"] - (call_time - row["requestsent"]), row["moves"], payload.get("move"), "black")
             conn.close()
-            return "It is not your turn", 400
+            return "Game updated", 205
+        else:
+            return handle_not_player_turn(conn)
 
     conn.commit()
     conn.close()

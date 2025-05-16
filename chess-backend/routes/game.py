@@ -57,9 +57,25 @@ def game():
         # check if the current bot is the white bot
         if row["whitebotid"] == bot_id:
             # get the move number by reading the length of the fen array
-            fen_arr = row["moves"].split(",")
-            move_number = len(fen_arr)
-            current_board = fen_arr[-1]
+            move_list = []
+            if row["moves"] != "":
+                move_list = row["moves"].split(",")
+            print(move_list)
+
+            move_number = len(move_list)
+
+            board = chess.Board(chess.STARTING_FEN)
+            col = 0
+            for move in move_list:
+                chess_move = chess.Move.from_uci(move)
+                if col % 2 == 0:
+                    board.turn = chess.WHITE
+                else:
+                    board.turn = chess.BLACK
+                board.push(chess_move)
+                col += 1
+
+            current_board = board.fen().split(" ")[0]
             # update the request sent time
             conn.execute("UPDATE game SET requestsent = ? WHERE id = ?", (time.time(), row["id"]))
             conn.commit()
@@ -78,9 +94,23 @@ def game():
         # check if the current bot is the black bot
         if row["blackbotid"] == bot_id:
             # get the move number by reading the length of the fen array
-            fen_arr = row["moves"].split(",")
-            move_number = len(fen_arr)
-            current_board = fen_arr[-1]
+
+            move_list = []
+            if row["moves"] != "":
+                move_list = row["moves"].split(",")
+            move_number = len(move_list)
+            board = chess.Board(chess.STARTING_FEN)
+            col = 0
+            for move in move_list:
+                chess_move = chess.Move.from_uci(move)
+                if col % 2 == 0:
+                    board.turn = chess.WHITE
+                else:
+                    board.turn = chess.BLACK
+                board.push(chess_move)
+                col += 1
+
+            current_board = board.fen().split(" ")[0]
             # update the request sent time
             conn.execute("UPDATE game SET requestsent = ? WHERE id = ?", (time.time(), row["id"]))
             conn.commit()

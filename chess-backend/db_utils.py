@@ -82,12 +82,12 @@ def init_game(conn, player_id, opponent_player_id, bot_id, opponent_bot_id):
     if random.randint(0, 1) == 0:
         conn.execute("""INSERT INTO game 
         (isactive, whiteplayerid, blackplayerid, whitebotid, blackbotid, winnerplayerid, winnerbotid, moves, whiteplayereval, blackplayereval, stockfisheval, timesettings, blackplayertime, whiteplayertime, requestsent, starttime, endtime) 
-        VALUES (1, ?, ?, ?, ?, NULL, NULL, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "0.0", "0.0", "0.0", ?, ?, ?, NULL, ?, NULL)""", 
+        VALUES (1, ?, ?, ?, ?, NULL, NULL, "", "0.0", "0.0", "0.0", ?, ?, ?, NULL, ?, NULL)""", 
         (opponent_player_id, player_id, opponent_bot_id, bot_id, timesettings, totaltime, totaltime, int(round(time.time() * 1000))))
     else:
         conn.execute("""INSERT INTO game 
         (isactive, whiteplayerid, blackplayerid, whitebotid, blackbotid, winnerplayerid, winnerbotid, moves, whiteplayereval, blackplayereval, stockfisheval, timesettings, blackplayertime, whiteplayertime, requestsent, starttime, endtime) 
-    VALUES (1, ?, ?, ?, ?, NULL, NULL, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "0.0", "0.0", "0.0", ?, ?, ?, NULL, ?, NULL)""",        
+    VALUES (1, ?, ?, ?, ?, NULL, NULL, "", "0.0", "0.0", "0.0", ?, ?, ?, NULL, ?, NULL)""",        
         (player_id, opponent_player_id, bot_id, opponent_bot_id, timesettings, totaltime, totaltime, int(round(time.time() * 1000))))
 
     conn.commit()
@@ -144,3 +144,86 @@ def check_bot_ownership(conn, bot_id, player_id):
     if row[1] != player_id:
         return -1
     return 0
+
+def check_game(board: chess.Board, time_left):
+    if board.is_checkmate():
+        return 1
+    if board.is_stalemate():
+        return -1
+    if board.is_insufficient_material():
+        return -1
+    if board.is_fivefold_repetition():
+        return -1
+    if board.is_fifty_moves():
+        return -1
+    if time_left <= 0:
+        return 1
+    return 0
+
+
+def reconstruct_board(moves):
+    moves_list = []
+    if moves != "":
+        moves_list = moves.split(",")
+    col = 0
+    board = chess.Board(chess.STARTING_FEN)
+    for move in moves_list:
+        chess_move = chess.Move.from_uci(move)
+        if col % 2 == 0:
+            board.turn = chess.WHITE
+        else:
+            board.turn = chess.BLACK
+        board.push(chess_move)
+        col += 1
+    return board
+
+def add_move(board, move_val, color):
+    if color == "white":
+        board.turn = chess.WHITE
+    else:
+        board.turn = chess.BLACK
+    # TODO proper validation of the move
+    move = chess.Move.from_uci(move_val)
+    board.push(move)
+    return board
+
+def handle_potential_game_over(conn, board, id, time, player_id, bot_id):
+    game_over = check_game(board, time)
+    if game_over == 1: # white loses
+        conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (-1, id))
+        conn.execute("UPDATE game SET winnerplayerid = ? WHERE id = ?", (player_id, id))
+        conn.execute("UPDATE game SET winnerbotid = ? WHERE id = ?", (bot_id, id))
+        conn.commit()
+        conn.close()
+        return "you lost", 202
+    elif game_over == -1: # draw
+        conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (-1, id))
+        conn.execute("UPDATE game SET winnerplayerid = NULL WHERE id = ?", (id))
+        conn.execute("UPDATE game SET winnerbotid = NULL WHERE id = ?", (id))
+        conn.commit()
+        conn.close()
+        return "draw", 202
+    return None
+
+def update_time_and_moves_and_isactive(conn, id, time, moves_list, move, color):
+    move_string = ""
+    if(moves_list == ""):
+        moves_list = move
+        move_string = move
+    else:
+        moves_list = moves_list.split(",")
+        moves_list.append(move)
+        move_string = ','.join(moves_list)
+    conn.execute("UPDATE game SET moves = ? WHERE id = ?", (move_string, id))
+    if color == "white":
+        conn.execute("UPDATE game SET whiteplayertime = ? WHERE id = ?", (time, id))
+        conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (2, id))
+    else:
+        conn.execute("UPDATE game SET blackplayertime = ? WHERE id = ?", (time, id))
+        conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (1, id))
+    conn.commit()
+
+def handle_not_player_turn(conn):
+    conn.commit()
+    conn.close()
+    return "It is not your turn, send a new request in like 5 seconds to see if the other bot actually made a turn", 205
