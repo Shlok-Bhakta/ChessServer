@@ -33,7 +33,7 @@ def start_game():
         return "Bot name does not belong to the player please pick a different name or pick a name that you own", 400
 
     # check if player&bot are currently in a game if so return a 202
-    cursor = conn.execute("SELECT * FROM game WHERE (whiteplayerid = ? OR blackplayerid = ?) AND (whitebotid = ? OR blackbotid = ?)", (player_id, player_id, bot_id, bot_id))
+    cursor = conn.execute("SELECT * FROM game WHERE (whiteplayerid = ? OR blackplayerid = ?) AND (whitebotid = ? OR blackbotid = ?) AND isactive != -1", (player_id, player_id, bot_id, bot_id))
     row = cursor.fetchone()
     if row:
         conn.commit()

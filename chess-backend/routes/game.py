@@ -41,7 +41,7 @@ def game():
         return "The bot does not belong to the player? make sure you dont have any typos", 400
     
     # check if player&bot are currently in a game
-    cursor = conn.execute("SELECT * FROM game WHERE (whiteplayerid = ? OR blackplayerid = ?) AND (whitebotid = ? OR blackbotid = ?)", (player_id, player_id, bot_id, bot_id))
+    cursor = conn.execute("SELECT * FROM game WHERE (whiteplayerid = ? OR blackplayerid = ?) AND (whitebotid = ? OR blackbotid = ?) AND isactive != -1", (player_id, player_id, bot_id, bot_id))
     row = cursor.fetchone() # current game row from the db
     if not row:
         conn.commit()
@@ -51,13 +51,16 @@ def game():
     # prepare the game and send back the responses
     # check if the game is over
     if(row["isactive"] == -1):
-        return "The game is over", 205    
+        return "The game is over", 202    
     # check if it is the current bots turn
     if row["isactive"] == 1: # white player goes
         # check if the current bot is the white bot
         if row["whitebotid"] == bot_id:
             board = reconstruct_board(row["moves"])
-
+            # check for game over states
+            check = handle_potential_game_over(conn, board, row["id"], row["whiteplayertime"], row["whiteplayerid"], row["whitebotid"])
+            if check != None:
+                return check
             current_board = board.fen().split(" ")[0]
             # update the request sent time
             conn.execute("UPDATE game SET requestsent = ? WHERE id = ?", (time.time(), row["id"]))
@@ -70,14 +73,15 @@ def game():
                 "color": "white"
             }
         else:
-            conn.commit()
-            conn.close()
-            return "It is not your turn, send a new request in like 5 seconds to see if the other bot actually made a turn", 205
+            return handle_not_player_turn(conn)
     if row["isactive"] == 2: # black player goes 
         # check if the current bot is the black bot
         if row["blackbotid"] == bot_id:
             board = reconstruct_board(row["moves"])
-
+            # check for game over states
+            check = handle_potential_game_over(conn, board, row["id"], row["blackplayertime"], row["blackplayerid"], row["blackbotid"])
+            if check != None:  
+                return check
             current_board = board.fen().split(" ")[0]
             # update the request sent time
             conn.execute("UPDATE game SET requestsent = ? WHERE id = ?", (time.time(), row["id"]))
@@ -90,10 +94,7 @@ def game():
                 "color": "black"
             }
         else:
-            conn.commit()
-            conn.close()
-            return "It is not your turn, send a new request in like 5 seconds to see if the other bot actually made a turn", 205
-
+            return handle_not_player_turn(conn)
     conn.commit()
     conn.close()
-    return f"hi here is your payload {payload} you are player {player_id} and bot {bot_id}", 200
+    return f"something is borked here, plz report to shlok", 200

@@ -189,13 +189,13 @@ def add_move(board, move_val, color):
 
 def handle_potential_game_over(conn, board, id, time, player_id, bot_id):
     game_over = check_game(board, time)
-    if game_over == 1: # white loses
+    if game_over == 1: # win
         conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (-1, id))
         conn.execute("UPDATE game SET winnerplayerid = ? WHERE id = ?", (player_id, id))
         conn.execute("UPDATE game SET winnerbotid = ? WHERE id = ?", (bot_id, id))
         conn.commit()
         conn.close()
-        return "you lost", 202
+        return "you win", 202
     elif game_over == -1: # draw
         conn.execute("UPDATE game SET isactive = ? WHERE id = ?", (-1, id))
         conn.execute("UPDATE game SET winnerplayerid = NULL WHERE id = ?", (id))

@@ -43,7 +43,7 @@ def move():
         return "The bot does not belong to the player? make sure you dont have any typos", 400
     
     # check if player&bot are currently in a game
-    cursor = conn.execute("SELECT * FROM game WHERE (whiteplayerid = ? OR blackplayerid = ?) AND (whitebotid = ? OR blackbotid = ?)", (player_id, player_id, bot_id, bot_id))
+    cursor = conn.execute("SELECT * FROM game WHERE (whiteplayerid = ? OR blackplayerid = ?) AND (whitebotid = ? OR blackbotid = ?) AND isactive != -1", (player_id, player_id, bot_id, bot_id))
     row = cursor.fetchone() # current game row from the db
     if not row:
         conn.commit()
@@ -52,7 +52,7 @@ def move():
 
     # check if the game is over
     if(row["isactive"] == -1):
-        return "The game is over", 205    
+        return "The game is over", 202    
     # check if it is the current bots turn
     if row["isactive"] == 1: # white player goes
         # check if the current bot is the white bot
