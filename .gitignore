@@ -1,2 +1,5 @@
 *.db
 *.db-journal
+chess-docs/.vitepress/cache
+
+*node_modules

@@ -15,4 +15,4 @@ tmux new-window -n "docs"
 tmux send-keys "nix develop" C-m
 tmux send-keys "cd chess-docs" C-m
 tmux send-keys "npm install" C-m
-tmux send-keys "npm run dev" C-m
+tmux send-keys "npm run docs:dev" C-m
