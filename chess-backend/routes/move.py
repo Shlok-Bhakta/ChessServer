@@ -48,7 +48,7 @@ def move():
     if not row:
         conn.commit()
         conn.close()
-        return "You are not in a game", 400
+        return "You are not in a game, You Probaly Lost", 202
 
     # check if the game is over
     if(row["isactive"] == -1):
